@@ -7,7 +7,7 @@ const lighthouse = require('lighthouse');
 
 import {lhConfig} from './lighthouseConfig';
 import * as fs from 'fs';
-import {JSONResult, config, FrameworkData, frameworks, BenchmarkError, BenchmarkOptions} from './common'
+import {JSONResult, config, FrameworkData, frameworks, BenchmarkError, ErrorsAndWarning, BenchmarkOptions} from './common'
 import * as R from 'ramda';
 
 var chromedriver:any = require('chromedriver');
@@ -37,25 +37,34 @@ function extractRelevantEvents(entries: logging.Entry[]) {
             protocolEvents.push(e)
         } else if (e.params.name==='EventDispatch') {
             if (e.params.args.data.type==="click") {
+                if (config.LOG_TIMELINE) console.log("CLICK ",JSON.stringify(e));
                 filteredEvents.push({type:'click', ts: +e.params.ts, dur: +e.params.dur, end: +e.params.ts+e.params.dur});
             }
         } else if (e.params.name==='TimeStamp' &&
             (e.params.args.data.message==='afterBenchmark' || e.params.args.data.message==='finishedBenchmark' || e.params.args.data.message==='runBenchmark' || e.params.args.data.message==='initBenchmark')) {
             filteredEvents.push({type: e.params.args.data.message, ts: +e.params.ts, dur: 0, end: +e.params.ts});
+            if (config.LOG_TIMELINE) console.log("TIMESTAMP ",JSON.stringify(e));
         } else if (e.params.name==='navigationStart') {
             filteredEvents.push({type:'navigationStart', ts: +e.params.ts, dur: 0, end: +e.params.ts});
+            if (config.LOG_TIMELINE) console.log("NAVIGATION START ",JSON.stringify(e));
         } else if (e.params.name==='Paint') {
+            if (config.LOG_TIMELINE) console.log("PAINT ",JSON.stringify(e));
             filteredEvents.push({type:'paint', ts: +e.params.ts, dur: +e.params.dur, end: +e.params.ts+e.params.dur, evt: JSON.stringify(e)});
         // } else if (e.params.name==='Rasterize') {
+        //     console.log("RASTERIZE ",JSON.stringify(e));
         //     filteredEvents.push({type:'paint', ts: +e.params.ts, dur: +e.params.dur, end: +e.params.ts+e.params.dur, evt: JSON.stringify(e)});
         // } else if (e.params.name==='CompositeLayers') {
+        //     console.log("COMPOSITE ",JSON.stringify(e));
         //     filteredEvents.push({type:'paint', ts: +e.params.ts, dur: +e.params.dur, end: +e.params.ts, evt: JSON.stringify(e)});
         // } else if (e.params.name==='Layout') {
+        //     console.log("LAYOUT ",JSON.stringify(e));
         //     filteredEvents.push({type:'paint', ts: +e.params.ts, dur: +e.params.dur, end: e.params.ts, evt: JSON.stringify(e)});
         // } else if (e.params.name==='UpdateLayerTree') {
+        //     console.log("UPDATELAYER ",JSON.stringify(e));
         //     filteredEvents.push({type:'paint', ts: +e.params.ts, dur: +e.params.dur, end: +e.params.ts+e.params.dur, evt: JSON.stringify(e)});
         } else if (e.params.name==='MajorGC' && e.params.args.usedHeapSizeAfter) {
             filteredEvents.push({type:'gc', ts: +e.params.ts, end:+e.params.ts, mem: Number(e.params.args.usedHeapSizeAfter)/1024/1024});
+            if (config.LOG_TIMELINE) console.log("GC ",JSON.stringify(e));
         }
     });
     return {filteredEvents, protocolEvents};
@@ -113,7 +122,7 @@ async function runLighthouse(protocolResults: any[]): Promise<LighthouseData> {
     return LighthouseData;
 }
 
-async function computeResultsCPU(driver: WebDriver): Promise<number[]> {
+async function computeResultsCPU(driver: WebDriver, benchmarkOptions: BenchmarkOptions, framework: FrameworkData, benchmark: Benchmark, warnings: String[]): Promise<number[]> {
     let entriesBrowser = await driver.manage().logs().get(logging.Type.BROWSER);
     if (config.LOG_DEBUG) console.log("browser entries", entriesBrowser);
     const perfLogEvents = (await fetchEventsFromPerformanceLog(driver));
@@ -147,6 +156,14 @@ async function computeResultsCPU(driver: WebDriver): Promise<number[]> {
                 throw "at least one paint event is expected after the click event";
             }
 
+            console.log("# of paint events ",paints.length);
+            if (paints.length>2) {
+                warnings.push(`For framework ${framework.name} and benchmark ${benchmark.id} the number of paint calls is higher than expected. There were ${paints.length} paints though at most 2 are expected. Please consider re-running and check the results`);
+                console.log(`For framework ${framework.name} and benchmark ${benchmark.id} the number of paint calls is higher than expected. There were ${paints.length} paints though at most 2 are expected. Please consider re-running and check the results`);
+            }
+            paints.forEach(p => {
+                console.log("duration to paint ",((p.end - clicks[0].ts)/1000.0));
+            })
             let lastPaint = R.reduce((max, elem) => max.end > elem.end ? max : elem, {end: 0} as Timingresult, paints);
 
             let upperBoundForSoundnessCheck = (R.last(eventsDuringBenchmark).end - eventsDuringBenchmark[0].ts)/1000.0;
@@ -166,14 +183,14 @@ async function computeResultsCPU(driver: WebDriver): Promise<number[]> {
         }
         remaining = R.drop(1, evts[1]);
     }
-    if (results.length !== config.REPEAT_RUN) {
-        console.log(`soundness check failed. number or results isn't ${config.REPEAT_RUN}`, results, asString(filteredEvents));
-        throw `soundness check failed. number or results isn't ${config.REPEAT_RUN}`;
+    if (results.length !== benchmarkOptions.numIterationsForAllBenchmarks) {
+        console.log(`soundness check failed. number or results isn't ${benchmarkOptions.numIterationsForAllBenchmarks}`, results, asString(filteredEvents));
+        throw `soundness check failed. number or results isn't ${benchmarkOptions.numIterationsForAllBenchmarks}`;
     }
     return results;
 }
 
-async function computeResultsMEM(driver: WebDriver): Promise<number[]> {
+async function computeResultsMEM(driver: WebDriver, benchmarkOptions: BenchmarkOptions, framework: FrameworkData, benchmark: Benchmark, warnings: String[]): Promise<number[]> {
     let entriesBrowser = await driver.manage().logs().get(logging.Type.BROWSER);
     if (config.LOG_DEBUG) console.log("browser entries", entriesBrowser);
     let filteredEvents = (await fetchEventsFromPerformanceLog(driver)).timingResults;
@@ -198,14 +215,14 @@ async function computeResultsMEM(driver: WebDriver): Promise<number[]> {
         }
         remaining = R.drop(1, evts[1]);
     }
-    if (results.length !== config.REPEAT_RUN) {
-        console.log(`soundness check failed. number or results isn't ${config.REPEAT_RUN}`, results, asString(filteredEvents));
-        throw `soundness check failed. number or results isn't ${config.REPEAT_RUN}`;
+    if (results.length !== benchmarkOptions.numIterationsForAllBenchmarks) {
+        console.log(`soundness check failed. number or results isn't ${benchmarkOptions.numIterationsForAllBenchmarks}`, results, asString(filteredEvents));
+        throw `soundness check failed. number or results isn't ${benchmarkOptions.numIterationsForAllBenchmarks}`;
     }
     return results;
 }
 
-async function computeResultsStartup(driver: WebDriver): Promise<LighthouseData> {
+async function computeResultsStartup(driver: WebDriver, framework: FrameworkData, benchmark: Benchmark, warnings: String[]): Promise<LighthouseData> {
     let durationJSArr : number[] = await driver.executeScript("return [window.performance.timing.loadEventEnd, window.performance.timing.navigationStart]") as number[];
     let durationJS = (durationJSArr[0] as number) - (durationJSArr[1] as number);
     let reportedDuration = durationJS;
@@ -227,7 +244,7 @@ function buildDriver(benchmarkOptions: BenchmarkOptions) {
     let options = new chrome.Options();
     if(benchmarkOptions.headless) {
         options = options.addArguments("--headless");
-        options = options.addArguments("--disable-gpu");
+        options = options.addArguments("--disable-gpu"); // https://bugs.chromium.org/p/chromium/issues/detail?id=737678
     }
     options = options.addArguments("--js-flags=--expose-gc");
     options = options.addArguments("--no-sandbox");
@@ -351,9 +368,10 @@ async function registerError(driver: WebDriver, framework: FrameworkData, benchm
 
 const wait = (delay = 1000) => new Promise(res => setTimeout(res, delay));
 
-async function runMemOrCPUBenchmark(framework: FrameworkData, benchmark: Benchmark, benchmarkOptions: BenchmarkOptions): Promise<BenchmarkError[]>
+async function runMemOrCPUBenchmark(framework: FrameworkData, benchmark: Benchmark, benchmarkOptions: BenchmarkOptions): Promise<ErrorsAndWarning>
 {
     let errors: BenchmarkError[] = [];
+    let warnings: String[] = [];
 
     console.log("benchmarking ", framework, benchmark.id);
     let driver = buildDriver(benchmarkOptions);
@@ -374,7 +392,7 @@ async function runMemOrCPUBenchmark(framework: FrameworkData, benchmark: Benchma
                 throw e;
             }
         }
-        let results = benchmark.type === BenchmarkType.CPU ? await computeResultsCPU(driver) : await computeResultsMEM(driver);
+        let results = benchmark.type === BenchmarkType.CPU ? await computeResultsCPU(driver, benchmarkOptions, framework, benchmark, warnings) : await computeResultsMEM(driver, benchmarkOptions, framework, benchmark, warnings);
         await writeResult({ framework: framework, results: results, benchmark: benchmark }, benchmarkOptions.outputDirectory);
         console.log("QUIT");
         await driver.close();
@@ -385,14 +403,15 @@ async function runMemOrCPUBenchmark(framework: FrameworkData, benchmark: Benchma
         await driver.quit();
         if (config.EXIT_ON_ERROR) { throw "Benchmarking failed" }
     }
-    return errors;
+    return {errors, warnings};
 }
 
-async function runStartupBenchmark(framework: FrameworkData, benchmark: Benchmark, benchmarkOptions: BenchmarkOptions ): Promise<BenchmarkError[]>
+async function runStartupBenchmark(framework: FrameworkData, benchmark: Benchmark, benchmarkOptions: BenchmarkOptions ): Promise<ErrorsAndWarning>
 {
     console.log("benchmarking startup", framework, benchmark.id);
     let results : LighthouseData[] = [];
     let errors: BenchmarkError[] = [];
+    let warnings: String[] = [];
 
     let chromeDuration = 0;
     try {
@@ -408,7 +427,7 @@ async function runStartupBenchmark(framework: FrameworkData, benchmark: Benchmar
                 await afterBenchmark(driver, benchmark, framework);
                 await driver.executeScript("console.timeStamp('afterBenchmark')");
                 await wait(5000);
-                results.push(await computeResultsStartup(driver));
+                results.push(await computeResultsStartup(driver, framework, benchmark, warnings));
             } catch (e) {
                 errors.push(await registerError(driver, framework, benchmark, e));
                 throw e;
@@ -422,10 +441,10 @@ async function runStartupBenchmark(framework: FrameworkData, benchmark: Benchmar
         console.log("ERROR:", e);
         if (config.EXIT_ON_ERROR) { throw "Benchmarking failed"}
     }
-    return errors;
+    return {errors, warnings};
 }
 
-export async function executeBenchmark(frameworkName: string, benchmarkName: string, benchmarkOptions: BenchmarkOptions): Promise<BenchmarkError[]> {
+export async function executeBenchmark(frameworkName: string, benchmarkName: string, benchmarkOptions: BenchmarkOptions): Promise<ErrorsAndWarning> {
     let runFrameworks = frameworks.filter(f => frameworkName === f.name);
     let runBenchmarks = benchmarks.filter(b => benchmarkName === b.id);
     if (runFrameworks.length!=1) throw `Framework name ${frameworkName} is not unique`;
@@ -434,14 +453,14 @@ export async function executeBenchmark(frameworkName: string, benchmarkName: str
     let framework = runFrameworks[0];
     let benchmark = runBenchmarks[0];
 
-    let errors : BenchmarkError[];
+    let errorsAndWarnings : ErrorsAndWarning;
     if (benchmark.type == BenchmarkType.STARTUP) {
-        errors = await runStartupBenchmark(framework, benchmark, benchmarkOptions);
+        errorsAndWarnings = await runStartupBenchmark(framework, benchmark, benchmarkOptions);
     } else {
-        errors = await runMemOrCPUBenchmark(framework, benchmark, benchmarkOptions);
+        errorsAndWarnings = await runMemOrCPUBenchmark(framework, benchmark, benchmarkOptions);
     }
 
-    return errors;
+    return errorsAndWarnings;
 }
 
 process.on('message', (msg) => {
@@ -452,9 +471,9 @@ process.on('message', (msg) => {
 
     try {
         let errorsPromise = executeBenchmark(frameworkName, benchmarkName, benchmarkOptions);
-        errorsPromise.then(errors => {
-            if (config.LOG_DEBUG) console.log("benchmark finished - got errors promise", errors);
-            process.send({errors});
+        errorsPromise.then(errorsAndWarnings => {
+            if (config.LOG_DEBUG) console.log("benchmark finished - got errors promise", errorsAndWarnings);
+            process.send(errorsAndWarnings);
             process.exit(0);
         }).catch(err => {
             console.log("error running benchmark", err);            

@@ -9,6 +9,11 @@ export interface BenchmarkError {
     exception : string
 }
 
+export interface ErrorsAndWarning {
+    errors: BenchmarkError[];
+    warnings: String[];
+}
+
 export interface BenchmarkOptions {
     outputDirectory: string;
     port: string;
@@ -26,6 +31,7 @@ export let config = {
     LOG_PROGRESS: true,
     LOG_DETAILS: false,
     LOG_DEBUG: false,
+    LOG_TIMELINE: false,
     EXIT_ON_ERROR: false,
     STARTUP_DURATION_FROM_EVENTLOG: true,
     STARTUP_SLEEP_DURATION: 1000,
@@ -52,15 +58,15 @@ function f(name: string, keyed: boolean, options: Options = {uri: null, useShado
 export let frameworks = [
     f("angular-light-v0.14.1-keyed", true),
     f("angular-v1.6.3-keyed", true),
-    f("angular-v5.2.2-keyed", true),
-    f("angular-v5.2.2-non-keyed", false),
-    f("angular-v5.2.2-no-zone-keyed", true),
-    f("angular-v5.2.2-optimized-keyed", true),
+    f("angular-v6.0.0-keyed", true),
+    f("angular-v6.0.0-non-keyed", false),
+    f("angular-v6.0.0-no-zone-keyed", true),
+    f("angular-v6.0.0-optimized-keyed", true),
     f("apprun-v1.8.3-keyed", true),
     f("apprun-v1.8.3-non-keyed", false),
     f("attodom-v0.5.2-keyed", true),
-    f("aurelia-v1.1.5-keyed", true),
-    f("aurelia-v1.1.5-non-keyed", false),
+    f("aurelia-v1.2.0-keyed", true),
+    f("aurelia-v1.2.0-non-keyed", false),
     f("binding.scala-v10.0.1-keyed", true, {uri: "binding.scala-v10.0.1-keyed/target/web/stage"}),
     f("bobril-v8.0.1-keyed", true),
     f("choo-v6.5.0-keyed", true),
@@ -70,8 +76,8 @@ export let frameworks = [
     f("dio-v8.1.1-non-keyed", false),
     f("dojo2-rc-keyed", true, {uri: "dojo2-rc-keyed/output/dist"}),
     f("dojo2-rc-non-keyed", false, {uri: "dojo2-rc-non-keyed/output/dist"}),
-    f("domvm-v3.2.4-keyed", true),
-    f("domvm-v3.2.4-non-keyed", false),
+    f("domvm-v3.3.1-keyed", true),
+    f("domvm-v3.3.1-non-keyed", false),
     f("elm-v0.18.0-keyed", true),
     f("ember-v3.0.0-keyed", true, {uri: "ember-v3.0.0-keyed/dist"}),
     f("etch-v0.12.5-keyed", true),
@@ -84,10 +90,11 @@ export let frameworks = [
     f("hyperhtml-v2.4.0-keyed", true),
     f("inferno-v4.0.6-keyed", true),
     f("inferno-v4.0.6-non-keyed", false),
-    f("ivi-v0.9.1-keyed", true),
+    f("ivi-v0.10.0-keyed", true),
     f("knockout-v3.4.1-keyed", true),
-    f("lit-html-v0.9.0-keyed", true),
-    f("lit-html-v0.9.0-non-keyed", false),
+    f("knockout-v3.4.2-ko-jsx-keyed", true),
+    f("lit-html-v0.10.0-keyed", true),
+    f("lit-html-v0.10.0-non-keyed", false),
     f("maik-h-v2.5.2-keyed", true),
     f("maik-h-v2.5.2-non-keyed", false),
     f("maquette-v3.0.1-keyed", true),
@@ -115,6 +122,7 @@ export let frameworks = [
     f("react-v16.1.0-mobX-v3.3.1-keyed", true),
     f("react-v16.1.0-non-keyed", false),
     f("react-v16.1.0-redux-v3.7.2-keyed", true),
+    f("react-v16.1.0-redux-combiner-v0.4.1-keyed", true),
     f("reagent-v0.8-keyed", true),
     f("redom-v3.10.1-keyed", true),
     f("redom-v3.10.1-non-keyed", false),
