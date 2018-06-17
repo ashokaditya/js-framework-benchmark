@@ -51,7 +51,7 @@ interface Options {
 }
 
 function f(name: string, keyed: boolean, options: Options = {uri: null, useShadowRoot: false}): FrameworkData {
-    let ret = {name, keyed, uri: options.uri ? options.uri : name, useShadowRoot: options.useShadowRoot};
+    let ret = {name, keyed, uri: 'frameworks/' + (options.uri ? options.uri : name), useShadowRoot: options.useShadowRoot};
     return ret;
 }
 
@@ -76,8 +76,8 @@ export let frameworks = [
     f("dio-v8.1.1-non-keyed", false),
     f("dojo2-rc-keyed", true, {uri: "dojo2-rc-keyed/output/dist"}),
     f("dojo2-rc-non-keyed", false, {uri: "dojo2-rc-non-keyed/output/dist"}),
-    f("domvm-v3.3.1-keyed", true),
-    f("domvm-v3.3.1-non-keyed", false),
+    f("domvm-v3.3.2-keyed", true),
+    f("domvm-v3.3.2-non-keyed", false),
     f("elm-v0.18.0-keyed", true),
     f("ember-v3.0.0-keyed", true, {uri: "ember-v3.0.0-keyed/dist"}),
     f("etch-v0.12.5-keyed", true),
@@ -90,7 +90,7 @@ export let frameworks = [
     f("hyperhtml-v2.4.0-keyed", true),
     f("inferno-v4.0.6-keyed", true),
     f("inferno-v4.0.6-non-keyed", false),
-    f("ivi-v0.10.0-keyed", true),
+    f("ivi-v0.13.0-keyed", true),
     f("knockout-v3.4.1-keyed", true),
     f("knockout-v3.4.2-ko-jsx-keyed", true),
     f("lit-html-v0.10.0-keyed", true),
@@ -98,8 +98,8 @@ export let frameworks = [
     f("maik-h-v2.5.2-keyed", true),
     f("maik-h-v2.5.2-non-keyed", false),
     f("maquette-v3.0.1-keyed", true),
-    f("marionette-v3.5.1-domapi-keyed", true),
-    f("marionette-v3.5.1-keyed", true),
+    f("marionette-v4.0.0-keyed", true),
+    f("marionette-v4.0.0-jquery-keyed", true),
     f("marko-v4.5.6-keyed", true),
     f("miso-0.18.0.0-keyed", true, {uri: "miso-0.18.0.0-keyed/dist-bundle"}),
     f("mithril-v1.1.1-keyed", true),
@@ -133,6 +133,7 @@ export let frameworks = [
     f("san-v3.5.5-non-keyed", false),
     f("simulacra-v2.1.5-non-keyed", false),
     f("slim-js-v3.0.2-non-keyed", false),
+    f("solid-js-v0.0.8-keyed", true),
     f("stem-v0.2.70-non-keyed", false),
     f("surplus-v0.5.0-keyed", true),
     f("surplus-v0.5.0-non-keyed", false),
@@ -142,8 +143,9 @@ export let frameworks = [
     f("tsers-v1.0.0-non-keyed", false),
     f("vanillajs-keyed", true),
     f("vanillajs-non-keyed", false),
+    f("vanillajs-wc-keyed", true),
     f("vidom-v0.9.8-keyed", true),
     f("vuera-v0.1.3-non-keyed", false),
-    f("vue-v2.5.3-keyed", true),
-    f("vue-v2.5.3-non-keyed", false)
+    f("vue-v2.5.16-keyed", true),
+    f("vue-v2.5.16-non-keyed", false)
 ]

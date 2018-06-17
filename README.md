@@ -78,7 +78,7 @@ Now open a new terminal window and keep http-server running in background.
 
 We now try to build the first framework. Go to the vanillajs reference implementation
 ```
-cd vanillajs-keyed
+cd frameworks/vanillajs-keyed
 ```
 and install the dependencies
 ```
@@ -89,7 +89,7 @@ and build the framework
 npm run build-prod
 ```
 There should be no build errors and we can open the framework in the browser:
-[http://localhost:8080/vanillajs-keyed/](http://localhost:8080/vanillajs-keyed/)
+[http://localhost:8080/frameworks/vanillajs-keyed/](http://localhost:8080/frameworks/vanillajs-keyed/)
 
 Some frameworks like binding.scala or ember can't be opened that way, because they need a 'dist' or 'target/web/stage' or something in the URL. You can find out the correct URL in the [index.html](http://localhost:8080/index.html) you've opened before or take a look whether there's a third parameter in [common.ts](https://github.com/krausest/js-framework-benchmark/blob/master/webdriver-ts/src/common.ts#L38-L42) that represents the url.
 
@@ -102,7 +102,7 @@ Open the browser console and click a bit on the buttons and you should see some 
 
 For contributions it is basically sufficient to create a new directory for your framework that supports `npm install` and `npm run build-prod` and can be then opened in the browser. All other steps are optional. Let's simulate that by copying vanillajs.
 ```
-cd ..
+cd ../frameworks
 cp -r vanillajs-keyed super-vanillajs-keyed
 cd super-vanillajs-keyed
 ```
@@ -112,7 +112,7 @@ Then we edit super-vanillajs-keyed/index.html to have a correct index.html:
 ...
                     <h1>Super-VanillaJS-"keyed"</h1>
 ```
-In most cases you'll need `npm install` and `npm run build-prod` and then check whether it works in the browser on [http://localhost:8080/super-vanillajs-keyed/](http://localhost:8080/super-vanillajs-keyed/).
+In most cases you'll need `npm install` and `npm run build-prod` and then check whether it works in the browser on [http://localhost:8080/frameworks/super-vanillajs-keyed/](http://localhost:8080/frameworks/super-vanillajs-keyed/).
 
 (Of course in reality you'd rather throw out the javascript source files and use your framework there instead of only changing the html file.)
 
@@ -121,7 +121,7 @@ In most cases you'll need `npm install` and `npm run build-prod` and then check 
 As mentioned above the benchmark uses an automated benchmark driver using chromedriver to measure the duration for each operation using chrome's timeline. Here are the steps to run is for a single framework:
 
 ```
-cd ..
+cd ../..
 cd webdriver-ts
 ```
 and install the dependencies
@@ -240,7 +240,7 @@ runs the test for all frameworks that contain either angular or bob, which means
 ## How to contribute
 
 Contributions are very welcome. Please use the following rules:
-* Name your directory [FrameworkName]-v[Version]-[keyed|non-keyed]
+* Name your directory frameworks/[FrameworkName]-v[Version]-[keyed|non-keyed]
 * Each contribution must be buildable by `npm install` and `npm run build-prod` command in the directory. What build-prod does is up to you. Often there's an `npm run build-dev` that creates a development build
 * Every implementation must use bootstrap provided in the root css directory. 
 * All npm dependencies should be installed locally (i.e. listed in your package.json). Http-server should not be a local dependency. It is installed from the root directory to allow access to bootstrap.
@@ -250,6 +250,7 @@ Contributions are very welcome. Please use the following rules:
 * You don't need to update /index.html. It's created with a script (see 6.2 above).
 * You don't need to edit webdriver-ts/common.ts. If you have a conflict in common.ts you don't need to resolve it. More often than not I'm just merging the pull request in the moment you're fixing the conflict.
 * Please don't commit any of the result file webdriver-ts/table.html, webdriver-ts-results/src/results.ts or webdriver-ts-results/table.html. I use to run the benchmarks after merging and publish updated (temporary) results.
+* The latest stable chrome can be used regarding web features and language level (babel-preset-env "last 1 chrome versions")
 
 This work is derived from a benchmark that Richard Ayotte published on https://gist.github.com/RichAyotte/a7b8780341d5e75beca7 and adds more framework and more operations. Thanks for the great work.
 
